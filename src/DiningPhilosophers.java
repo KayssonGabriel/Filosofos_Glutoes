@@ -17,12 +17,15 @@ public class DiningPhilosophers {
         }
 
         // Aguarda todas as threads terminarem (neste exemplo, elas executam indefinidamente)
-        for (int i = 0; i < 5; i++) {
-            try {
-                threads[i].join();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+        try {
+            for (Thread thread : threads) {
+                thread.join();
             }
+        } catch (InterruptedException e) {
+            for (Thread thread : threads) {
+                thread.interrupt();
+            }
+            Thread.currentThread().interrupt();
         }
     }
 }

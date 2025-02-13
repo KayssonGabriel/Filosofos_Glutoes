@@ -36,9 +36,13 @@ public class Philosopher implements Runnable {
      */
     @Override
     public void run() {
-        while (true) {
-            think();
-            eat();
+        try {
+            while (!Thread.currentThread().isInterrupted()) {
+                think();
+                eat();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -46,13 +50,9 @@ public class Philosopher implements Runnable {
      * Simula o tempo que o filósofo passa pensando.
      * A thread dorme por um período aleatório entre 0 e 5000 milissegundos.
      */
-    private void think() {
+    private void think() throws InterruptedException {
         System.out.println("Philosopher " + philosopherId + " thinking...");
-        try {
-            Thread.sleep(random.nextInt(5000)); // Tempo aleatório para pensar
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+        Thread.sleep(random.nextInt(5000));
     }
 
     /**
@@ -61,7 +61,7 @@ public class Philosopher implements Runnable {
      * Para evitar deadlock, ele adquire os garfos na ordem: primeiro o de menor índice e depois o de maior índice.
      * Ao final, os garfos são liberados.
      */
-    private void eat() {
+    private void eat() throws InterruptedException {
         // Índice do garfo à esquerda e à direita
         int left = philosopherId;
         int right = (philosopherId + 1) % table.forks.length;
@@ -73,18 +73,16 @@ public class Philosopher implements Runnable {
         int firstFork = Math.min(left, right);
         int secondFork = Math.max(left, right);
 
-        // Adquire os dois garfos (locks)
-        table.forks[firstFork].lock();
-        table.forks[secondFork].lock();
-
+        table.forks[firstFork].lockInterruptibly();
         try {
-            System.out.println("Philosopher " + philosopherId + " eating...");
-            Thread.sleep(random.nextInt(10000)); // Tempo aleatório para comer
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            table.forks[secondFork].lockInterruptibly();
+            try {
+                System.out.println("Philosopher " + philosopherId + " eating...");
+                Thread.sleep(random.nextInt(10000));
+            } finally {
+                table.forks[secondFork].unlock();
+            }
         } finally {
-            // Libera os garfos ao sair do bloco (similar ao lock_guard em C++)
-            table.forks[secondFork].unlock();
             table.forks[firstFork].unlock();
         }
 
